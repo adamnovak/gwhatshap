@@ -653,6 +653,11 @@ def generate_hap_contigs(sample_superreads, sample_components, node_seq_list, lo
 		print(hap1)
 		print(hap2)
 		
+def reverse_complement(seq):
+	seq_dict = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'a': 'T', 'c': 'G', 'g': 'C', 't': 'A'}
+	return "".join([seq_dict[base] for base in reversed(seq)])
+
+		
 def generate_hap_contigs_based_on_canu(sample_superreads, sample_components, node_seq_list, locus_branch_mapping, edge_connections, canu_alignments, vg_file):
 	#sample = 0
 	#components = sample_components[sample]
@@ -667,11 +672,12 @@ def generate_hap_contigs_based_on_canu(sample_superreads, sample_components, nod
 				#TODO: check this once, out by default 0 in dict
 				from_edge_orientation = 0
 				to_edge_orientation = 0
-				if l.edge[j].from_start == 'False':
+				if l.edge[j].from_start == True:
 					from_edge_orientation = 1
-				if l.edge[j].to_end == 'False':
+				if l.edge[j].to_end == True:
 					to_edge_orientation = 1 # store the orientation of each node
 				edge_connections_sign[str(from_edge)+"_"+str(l.edge[j].to)] = str(from_edge_orientation)+"_"+str(to_edge_orientation)
+				# 1 means take the reverse complement of the node.
 
 	
 
@@ -727,12 +733,29 @@ def generate_hap_contigs_based_on_canu(sample_superreads, sample_components, nod
 				index1 =  g.path.mapping[i].position.node_id
 				save_nodes.append(index1)
 			print('i am in canu')
-				
+			k = 0
 			for i in range(0,len(g.path.mapping)):
 				index1 =  g.path.mapping[i].position.node_id
+				#index2 =  g.path.mapping[i+1].position.node_id
+				print(index1)
+				#print(index2)
 				orientation = g.path.mapping[i].position.is_reverse
+				#if index1 not in haplotype_over_bubbles and index2 not in haplotype_over_bubbles:
 				if index1 not in haplotype_over_bubbles:
+					#if str(index1) + '_'+str(index2) in edge_connections_sign:
+						#orientation = edge_connections_sign[str(index1) + '_'+str(index2)]
+						#if k ==0:
+							#print('i am in k=0')
+							#contig_nodes.append(str(index1)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
+						#contig_nodes.append(str(index2)+"_"+ orientation.split("_")[1])
+					#if str(index2) + '_'+str(index1) in edge_connections_sign:
+						#orientation = edge_connections_sign[str(index2) + '_'+str(index1)]
+						#if k ==0:
+							#print('i am in k=0')
+							#contig_nodes.append(str(index2)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
+						#contig_nodes.append(str(index1)+"_"+ orientation.split("_")[1])
 					contig_nodes.append(str(index1)+"_"+str(orientation)) # taking ordering from canu
+					k +=1
 					print('i am in canu1')
 				#if index1 == 98000 or index1 == 97995 or index1 == 97987 or index1 == 97985:
 					#continue
@@ -780,16 +803,20 @@ def generate_hap_contigs_based_on_canu(sample_superreads, sample_components, nod
 								#contig_nodes.append(str(node1_tmp)+"_"+ orientation.split("_")[1])
 								#if node1 in save_nodes:
 								#	i = save_nodes.index(node1) + 1 # TODO: also check this.
+					k =0 # to keep track of bubble end and in this case add the node sequence of starting too.
 					if node2 in save_nodes and node1 in save_nodes and node1_tmp in save_nodes and node2_tmp in save_nodes:
 						i = max(max(max(save_nodes.index(node1), save_nodes.index(node2)), save_nodes.index(node1_tmp)), save_nodes.index(node2_tmp)) + 1
 								
 			# build the contig sequence taking care of reverse complements for every canu contigs
 			print(contig_nodes)
+			contig_nodes_seq = ''
 			for i in contig_nodes:
+				node = int(i.split("_")[0])
 				if i.split("_")[1] == '1':
-					contig_nodes_seq = ''.join(reversecomplement(node_seq_length[i])) #TODO: define reversecomplement and check concatenation of string
+					contig_nodes_seq = contig_nodes_seq + reverse_complement(str(node_seq_list[node])) #TODO: define reversecomplement and check concatenation of string
 				else:
-					contig_nodes_seq = ''.join(node_seq_length[i])
+					contig_nodes_seq = contig_nodes_seq + str(node_seq_list[node])
+			print(contig_nodes_seq)
 	#Now do it for haplotype 2 also.
 			
 
@@ -1600,3 +1627,4 @@ def add_arguments(parser):
 
 def main(args):
 	run_phaseg(**vars(args))
+
