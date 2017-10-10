@@ -519,12 +519,12 @@ def vg_reader(locus_file, gam_file, canu_alignments):
 	max_value = max(canu_bubbleid_ordering)
 	tmp = []
 	for i in canu_bubbleid_ordering:
-		max_value+=1
 		if i in tmp:
+			max_value+=1
 			canu_bubbleid_ordering_unfolded.append(max_value)
 		else:
 			canu_bubbleid_ordering_unfolded.append(i)
-			
+		tmp.append(i)
 
 
 	# both simple and complex bubbles: extract reads from GAM file associated with the locus and create a sorted readset.
@@ -673,18 +673,19 @@ def vg_reader(locus_file, gam_file, canu_alignments):
 						unfolded_readset.add(read_unfolded)
 						print(read_unfolded)
 						
-					if fuzzy_trincot(canu_bubbleid_ordering, reversed(bubble_list), True)!= False:
-						segments, segments_index = fuzzy_trincot(canu_bubbleid_ordering, reversed(bubble_list), True)
+					reversed_bubble_list = bubble_list[::-1]
+					if fuzzy_trincot(canu_bubbleid_ordering, reversed_bubble_list, True)!= False:
+						segments, segments_index = fuzzy_trincot(canu_bubbleid_ordering, reversed_bubble_list, True)
 						read_unfolded = Read(read.name, 0, 0, 0)
 						for i in range(0,len(segments_index)-1,2):
 							
 							tmp = []
 							if segments_index[i+1]-segments_index[i] == 1:
-								tmp.append(reversed(bubble_list)[segments_index[i]])
+								tmp.append(reversed_bubble_list[segments_index[i]])
 								#tmp.append(bubble_list[segments_index[i+1]])
 							else:
 								for k in range(segments_index[i], segments_index[i+1], 1):
-									tmp.append(reversed(bubble_list)[k])
+									tmp.append(reversed_bubble_list[k])
 								
 								result = find_matches(tmp, canu_bubbleid_ordering)
 								print('i am in result')
