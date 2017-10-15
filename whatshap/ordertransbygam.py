@@ -1,17 +1,23 @@
+import sys
+import stream
+import logging
+import vg_pb2
+from collections import Counter
+from collections import defaultdict
+import collections
+from collections import OrderedDict, namedtuple
+from collections import defaultdict
+
 rep_bubbles_filename = sys.argv[1]
 gam_filename = sys.argv[2]
 trans_filename = sys.argv[3]
 
-#out = sys.argv[2]
-
-d={}
-count=1
-
-rep_nodes = []
+# order the trans by gam and also remove the reptitive bubbles
+rep_nodes = set()
 with open(rep_bubbles_filename) as fp:
 	for line in fp:
 		var=line.rstrip()
-		rep_nodes.append(var)
+		rep_nodes.add(int(var))
 
 canu_gam_order = []
 with stream.open(str(gam_filename), "rb") as istream:
@@ -24,7 +30,7 @@ with stream.open(str(gam_filename), "rb") as istream:
 				canu_gam_order.append(node)
 
 bubbles_start = defaultdict()
-with stream.open('assembly_graph.P.int.remn2n.X_100.chrXIII.trans' ,"rb") as istream:
+with stream.open(str(trans_filename) ,"rb") as istream:
 	for data in istream:
 		l = vg_pb2.SnarlTraversal()
 		l.ParseFromString(data)
@@ -32,13 +38,20 @@ with stream.open('assembly_graph.P.int.remn2n.X_100.chrXIII.trans' ,"rb") as ist
 			start_node = l.snarl.end.node_id
 		else:
 			start_node = l.snarl.start.node_id
-		if start_node not in rep_nodes:
-			bubbles_start[start_node] = l
+		if l.snarl.end.backward == True:
+			end_node = l.snarl.start.node_id
+		else:
+			end_node = l.snarl.end.node_id
+		if start_node not in rep_nodes and end_node not in rep_nodes:
+			if start_node in canu_gam_order:
+				bubbles_start[start_node] = l
+			if end_node in canu_gam_order:
+				bubbles_start[end_node] = l
 
 
 sorted_dict = OrderedDict()
 index_map = {v: i for i, v in enumerate(canu_gam_order)}
-for i in sorted(a.items(), key=lambda pair: index_map[pair[0]]):
+for i in sorted(bubbles_start.items(), key=lambda pair: index_map[pair[0]]):
 	sorted_dict[i[0]] = i[1]
 
 

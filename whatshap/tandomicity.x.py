@@ -7,16 +7,23 @@ from collections import defaultdict
 import collections
 from collections import OrderedDict, namedtuple
 from collections import defaultdict
-# assumption ... all S' and before L's
-#filename = sys.argv[1]
-#out = sys.argv[2]
+
+# tandom and interspersed repeat from both aligned pacbio reads and true_haps
+trans_filename = sys.argv[1]
+gam_filename = sys.argv[2]
+true_haps_filename = sys.argv[3]
+parameter_interspersed = sys.argv[4]
+out_filename = sys.argv[5]
+
+out_file = open(out_filename, 'w')
+
 
 d={}
 count=1
 
 bubbles_start = set()
 #with stream.open('assembly_graph.P.int.remn2n.X_100.chrXIII.trans' ,"rb") as istream:
-with stream.open('assembly_graph.P.int.remn2n.X_100.chrXIII.trans' ,"rb") as istream:
+with stream.open(str(trans_filename) ,"rb") as istream:
 	for data in istream:
 		l = vg_pb2.SnarlTraversal()
 		l.ParseFromString(data)
@@ -30,7 +37,7 @@ with stream.open('assembly_graph.P.int.remn2n.X_100.chrXIII.trans' ,"rb") as ist
 multiplicity_bubbles = defaultdict(list)
 read_details = defaultdict(list)
 #with stream.open('../out.new.gam', "rb") as istream:
-with stream.open('true_haps.chrXIII.gam', "rb") as istream:
+with stream.open(str(gam_filename), "rb") as istream:
 	for data in istream:
 		g = vg_pb2.Alignment()
 		g.ParseFromString(data)
@@ -40,8 +47,22 @@ with stream.open('true_haps.chrXIII.gam', "rb") as istream:
 			if node in bubbles_start:
 				multiplicity_bubbles[node].append(g.name)
 			if node in tmp:
-				print(node)
+				out_file.write(str(node)+ '\n')
 			tmp.append(node)
+
+with stream.open(str(true_haps_filename), "rb") as istream:
+	for data in istream:
+		g = vg_pb2.Alignment()
+		g.ParseFromString(data)
+		tmp = []
+		for i in range(0,len(g.path.mapping)):
+			node = g.path.mapping[i].position.node_id
+			if node in bubbles_start:
+				multiplicity_bubbles[node].append(g.name)
+			if node in tmp:
+				out_file.write(str(node)+ '\n')
+			tmp.append(node)
+
 count=0
 repeaticity = defaultdict()
 repeaticity_read_support = defaultdict()
@@ -63,12 +84,13 @@ for k,v in multiplicity_bubbles.items():
 			l1_max = l1
 	#if max_val > 5 and l1_max > 1: # minimum read support and minimum multiplicty
 	if l1_max > 1:
-		print(k)
+		out_file.write(str(k)+ '\n')
 		#repeaticity[k] = l1_max
 		#repeaticity_read_support[k] = item_val
 		#print(item_val, max_val, l1_max, k, v)
-	if len(set(v)) > 38:
-		print(k)
+	if len(set(v)) > int(parameter_interspersed):
+		print(int(parameter_interspersed))
+		out_file.write(str(k)+ '\n')
 		#cnv = len(set(v))/38.0
 		#repeaticity_i[k] = cnv
 		#repeaticity_read_support_i[k] = set(v)
