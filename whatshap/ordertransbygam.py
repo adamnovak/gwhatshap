@@ -29,7 +29,7 @@ with stream.open(str(gam_filename), "rb") as istream:
 			if node not in rep_nodes:
 				canu_gam_order.append(node)
 
-bubbles_start = defaultdict()
+bubbles_start = defaultdict(list)
 with stream.open(str(trans_filename) ,"rb") as istream:
 	for data in istream:
 		l = vg_pb2.SnarlTraversal()
@@ -38,15 +38,9 @@ with stream.open(str(trans_filename) ,"rb") as istream:
 			start_node = l.snarl.end.node_id
 		else:
 			start_node = l.snarl.start.node_id
-		if l.snarl.end.backward == True:
-			end_node = l.snarl.start.node_id
-		else:
-			end_node = l.snarl.end.node_id
-		if start_node not in rep_nodes and end_node not in rep_nodes:
+		if start_node not in rep_nodes:
 			if start_node in canu_gam_order:
-				bubbles_start[start_node] = l
-			if end_node in canu_gam_order:
-				bubbles_start[end_node] = l
+				bubbles_start[start_node].append(l)
 
 
 sorted_dict = OrderedDict()
@@ -58,4 +52,5 @@ for i in sorted(bubbles_start.items(), key=lambda pair: index_map[pair[0]]):
 ostream = stream.open(str(sys.argv[4]), 'wb')
 
 for k,v in sorted_dict.items():
-	ostream.write(v)
+	for i in v:
+		ostream.write(i)
