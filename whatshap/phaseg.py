@@ -309,7 +309,7 @@ def vg_reader(locus_file, gam_file):
 					for p,j in enumerate(b):
 						reverse_mapping[j].append([k,i, len(v)]) # in complex bubbles, a node can map to multiple branches.
 	#print(reverse_mapping)
-	print(locus_branch_mapping)
+	#print(locus_branch_mapping)
 
 	# both simple and complex bubbles: extract reads from GAM file associated with the locus and create a sorted readset.
 	# in complex bubble, set of nodes uniquely determine the path. 
@@ -406,8 +406,8 @@ def vg_reader(locus_file, gam_file):
 
 			#if len(read) >= 2:
 			readset.add(read)
-	print("non-shattered")
-	print(count)
+	#print("non-shattered")
+	#print(count)
 	#print(readset)
 	readset1=ReadSet()
 	tmp_duplicated=set()
@@ -417,7 +417,7 @@ def vg_reader(locus_file, gam_file):
 			tmp=[]
 			for variant in read:
 				tmp.append(variant.position)
-			print("duplicated variant")
+			#print("duplicated variant")
 			x = [item for item, count in collections.Counter(tmp).items() if count > 1]
 			for a in x:
 				tmp_duplicated.add(a)
@@ -464,7 +464,7 @@ def vg_reader(locus_file, gam_file):
 	print(duplicated)
 	print("reads considered before read-selection")
 	print(len(readset1))
-	print(readset1)
+	#print(readset1)
 	return readset1, alleles_per_pos, locus_branch_mapping
 
 
@@ -716,28 +716,28 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 			for i in range(0,len(g.path.mapping)):
 				index1 =  g.path.mapping[i].position.node_id
 				save_nodes.append(index1)
-			print('i am in canu')
+			#print('i am in canu')
 			k = 0
 			for i in range(0,len(g.path.mapping)):
 				index1 =  g.path.mapping[i].position.node_id
 				#index2 =  g.path.mapping[i+1].position.node_id
-				print(index1)
+				#print(index1)
 				#print(index2)
 				orientation = g.path.mapping[i].position.is_reverse
 				#if index1 not in haplotype_over_bubbles and index2 not in haplotype_over_bubbles:
 				if index1 not in haplotype_over_bubbles:
 					contig_nodes_blocks.append(str(index1)+"_"+str(orientation)) # taking ordering from canu
 					k +=1
-					print('i am in canu1')
+					#print('i am in canu1')
 
 				if index1 in haplotype_over_bubbles: # taking ordering from graph
 					for j in range(0, len(haplotype_over_bubbles[index1])):
-						print('i am in canu2')
+						#print('i am in canu2')
 						node1 = haplotype_over_bubbles[index1][j]
 						node2 = edge_connections[node1]
 						if node2 in haplotype_over_bubbles[index1]:
-							print(node1)
-							print(node2)
+							#print(node1)
+							#print(node2)
 							#if node1 == 116050 or node1 == 135765:
 								#continue
 							if str(node1) + '_'+str(node2) in edge_connections_sign:
@@ -752,9 +752,9 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 						node1_tmp = haplotype_over_bubbles[index1][len(haplotype_over_bubbles[index1]) - j-1]
 						node2_tmp = edge_connections[node1_tmp]
 						if node2_tmp in haplotype_over_bubbles[index1]:
-							print('hello')
-							print(node1_tmp)
-							print(node2_tmp)
+							#print('hello')
+							#print(node1_tmp)
+							#print(node2_tmp)
 							if str(node1_tmp) + '_'+str(node2_tmp) in edge_connections_sign:
 								orientation = edge_connections_sign[str(node1_tmp) + '_'+str(node2_tmp)]
 								if j ==0:
@@ -769,7 +769,7 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 							contig_nodes.append(contig_nodes_blocks)
 							contig_nodes_blocks = []
 			# build the contig sequence taking care of reverse complements for every canu contigs
-			print(contig_nodes)
+			#print(contig_nodes)
 			contig_nodes.append(contig_nodes_blocks) # for the last one.
 			for j, contig_blocks in enumerate(contig_nodes):
 				contig_nodes_seq = ''			
@@ -781,7 +781,7 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 						contig_nodes_seq = contig_nodes_seq + str(node_seq_list[node])
 				pred_haplotigs_file.write(">seq" + str(j) + "_1"+ "\n")
 				pred_haplotigs_file.write(contig_nodes_seq + '\n')
-				print(contig_nodes_seq)
+				#print(contig_nodes_seq)
 				
 				
 	with stream.open(str(canu_alignments), "rb") as istream:
@@ -795,19 +795,19 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 			for i in range(0,len(g.path.mapping)):
 				index1 =  g.path.mapping[i].position.node_id
 				save_nodes.append(index1)
-			print('i am in canu')
+			#print('i am in canu')
 			k = 0
 			for i in range(0,len(g.path.mapping)):
 				index1 =  g.path.mapping[i].position.node_id
 				#index2 =  g.path.mapping[i+1].position.node_id
-				print(index1)
+				#print(index1)
 				#print(index2)
 				orientation = g.path.mapping[i].position.is_reverse
 				#if index1 not in haplotype_over_bubbles2 and index2 not in haplotype_over_bubbles2:
 				if index1 not in haplotype_over_bubbles2:
 					contig_nodes_blocks.append(str(index1)+"_"+str(orientation)) # taking ordering from canu
 					k +=1
-					print('i am in canu1')
+					#print('i am in canu1')
 
 				if index1 in haplotype_over_bubbles2: # taking ordering from graph
 					for j in range(0, len(haplotype_over_bubbles2[index1])):
@@ -815,8 +815,8 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 						node1 = haplotype_over_bubbles2[index1][j]
 						node2 = edge_connections[node1]
 						if node2 in haplotype_over_bubbles2[index1]:
-							print(node1)
-							print(node2)
+							#print(node1)
+							#print(node2)
 							#if node1 == 116050 or node1 == 135765:
 								#continue
 							if str(node1) + '_'+str(node2) in edge_connections_sign:
@@ -831,9 +831,9 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 						node1_tmp = haplotype_over_bubbles2[index1][len(haplotype_over_bubbles2[index1]) - j-1]
 						node2_tmp = edge_connections[node1_tmp]
 						if node2_tmp in haplotype_over_bubbles2[index1]:
-							print('hello')
-							print(node1_tmp)
-							print(node2_tmp)
+							#print('hello')
+							#print(node1_tmp)
+							#print(node2_tmp)
 							if str(node1_tmp) + '_'+str(node2_tmp) in edge_connections_sign:
 								orientation = edge_connections_sign[str(node1_tmp) + '_'+str(node2_tmp)]
 								if j ==0:
@@ -848,7 +848,7 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 							contig_nodes.append(contig_nodes_blocks)
 							contig_nodes_blocks = []
 			# build the contig sequence taking care of reverse complements for every canu contigs
-			print(contig_nodes)
+			#print(contig_nodes)
 			contig_nodes.append(contig_nodes_blocks) # for the last one
 			for j, contig_blocks in enumerate(contig_nodes):
 				contig_nodes_seq = ''			
@@ -860,7 +860,7 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 						contig_nodes_seq = contig_nodes_seq + str(node_seq_list[node])
 				pred_haplotigs_file.write(">seq" + str(j) + "_2"+ "\n")
 				pred_haplotigs_file.write(contig_nodes_seq + '\n')
-				print(contig_nodes_seq)	
+				#print(contig_nodes_seq)	
 
 
 
@@ -1516,7 +1516,7 @@ def run_phaseg(locus_file, gam_file, vg_file, canu_alignments, true_haps, pred_r
 		superreads_list, transmission_vector = dp_table.get_super_reads()
 
 		cost = dp_table.get_optimal_cost()
-		print(superreads_list[0])
+		#print(superreads_list[0])
 		#print(cost)
 		read_partitions = dp_table.get_optimal_partitioning()
 		#print(read_partitions)
@@ -1672,4 +1672,3 @@ def add_arguments(parser):
 
 def main(args):
 	run_phaseg(**vars(args))
-
