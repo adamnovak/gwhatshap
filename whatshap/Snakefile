@@ -1,0 +1,343 @@
+import pysam
+picard_tmpdir_switch=''
+if 'TMPDIR' in os.environ : picard_tmpdir_switch='TMP_DIR=%s'%os.environ['TMPDIR']
+
+genome = ['yeast']
+genome1 = ['SK1', 'Y12']
+platform = ['illumina', 'pacbio']
+sample = ['SK1_Y12']
+coverage = [10,20,30,40]
+chromosome = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI']
+
+# Tools assumed to be installed somewhere on the PATH.
+samtools = '/MMCI/TM/structvar/work/software/packages/samtools-1.2/samtools'
+bwa = '/MMCI/TM/structvar/work/software/packages/bwa-0.7.12/bwa'
+picard = '/MMCI/TM/structvar/work/software/packages/picard-tools-1.130/picard.jar'
+seqtk = '~/seqtk/seqtk'
+sga = '~/sga_run/sga/src/SGA/sga'
+bfc = '~/bfc/bfc'
+gfatools = '~/fermikit/fermi.kit/k8 ~/gfatools/gfatools.js'
+whatshap = 'whatshap'
+vg = '~/vg_run/vg/bin/vg'
+art = '/local/data/dip_assm/simulated/art_src_MountRainier_Linux/binaries/art_illumina'
+grem = './scripts/grem'
+mummer = '~/MUMmer3.23/dnadiff'
+
+#do this for mummer
+# LD_LIBRARY_PATH=/home/sgarg/anaconda3_fix/lib/:$LD_LIBRARY_PATH
+# export LD_LIBRARY_PATH
+
+dataset_pattern = '{genome,[a-z]+}.{platform,[a-z]+}.{sample,[A-Z_0-9]+}'
+
+rule master:
+	input:
+		#expand('sga/reads/{genome}.illumina.{sample}.cov{coverage}.chr{chromosome}.pp.rbwt', genome = genome, sample = sample, coverage=coverage, chromosome = chromosome),
+		#expand('gfatools/graphs/{genome}.illumina.{sample}.cov{coverage}.chr{chromosome}.pp.assembly-graph.int.gfa', genome = genome, sample = sample, coverage=coverage, chromosome = chromosome),
+		expand('illumina/sim.SK1_Y12.pp.fq', genome1= genome1),
+		expand('canu_cov{coverage}/yeast.contigs.x.fasta', coverage=coverage),
+		expand('approach/graph/sim.SK1_Y12.chrall.cov{coverage}.seeds.gam', coverage=coverage),
+		expand('canu_cov{coverage}/yeast.contigs.seeds.gam', coverage=coverage),
+		expand('pacbio/sim.{genome1}.chr{chromosome}.fastq.gz', genome1=genome1, chromosome= chromosome),
+		expand('illumina/sim.SK1_Y12.pp.rbwt'),
+		expand('approach/graph/sim.SK1_Y12.chrall.cov{coverage}.len1500.gam', coverage=coverage),
+		expand('canu_cov{coverage}/yeast.contigs.gam', coverage=coverage),
+		expand('mummer/canu/yeast.canu_cov{coverage}to{genome1}.report', coverage = coverage, genome1=genome1)
+
+	message: 'MASTER rule'
+
+#sgarg@d3compute02:/local/data/yeast_analysis/true_haps$ zcat SK1.genome.fa.gz > SK1.genome.fa
+#sgarg@d3compute02:/local/data/yeast_analysis/true_haps$ zcat Y12.genome.fa.gz > Y12.genome.fa
+#sgarg@d3compute02:/local/data/yeast_analysis/true_haps$ sed -i -e 's/>/>SK1/g' SK1.genome.fa
+#sgarg@d3compute02:/local/data/yeast_analysis/true_haps$ sed -i -e 's/>/>Y12/g' Y12.genome.fa
+#sgarg@d3compute02:/local/data/yeast_analysis/true_haps$ faidx --split-files SK1.genome.fa
+#sgarg@d3compute02:/local/data/yeast_analysis/true_haps$ faidx --split-files Y12.genome.fa
+	
+	
+
+rule simulate_illumina_reads:
+	input:
+		fasta1='true_haps/{genome1, [a-zA-Z0-9]+}.genome.fa',
+	output: 'illumina/sim.{genome1, [a-zA-Z0-9]+}_1.fq', 'illumina/sim.{genome1, [a-zA-Z0-9]+}_2.fq'
+	log: 'illumina/sim.{genome1, [a-zA-Z0-9]+}_1.fq.log'
+	threads: 2
+	run: 
+		#prefin = input.fasta1.split("/")[1].split(".")[:-1][0]
+		prefixout = '.'.join(map(str, output[0].split(".")[:-1]))[:-1]
+		shell('{art} -ss HSXn -sam -i {input.fasta1} -p -d {wildcards.genome1} -l 150 -f 15 -m 200 -s 10 -o {prefixout} > {log} 2>&1')
+
+rule combine_strains:
+	input:'illumina/sim.SK1_1.fq', 'illumina/sim.Y12_1.fq', 'illumina/sim.SK1_2.fq', 'illumina/sim.Y12_2.fq'
+	output: 'illumina/sim.SK1_Y12.1.fq', 'illumina/sim.SK1_Y12.2.fq',
+	shell: 'cat {input[0]} {input[1]} > {output[0]} && cat {input[2]} {input[3]} > {output[1]}'
+
+rule bfc_error_correction:
+	input: 'illumina/sim.SK1_Y12.1.fq', 'illumina/sim.SK1_Y12.2.fq',
+	output: 'illumina/sim.SK1_Y12.1.bfc.fq', 'illumina/sim.SK1_Y12.2.bfc.fq',
+	shell: '~/bfc/bfc -s 12.16m -t 16 {input[0]} > {output[0]} && ~/bfc/bfc -s 12.16m -t 16 {input[1]} > {output[1]}'
+
+rule sga_preprocessing:
+	input:
+		fastq1='illumina/sim.SK1_Y12.1.bfc.fq',
+		fastq2='illumina/sim.SK1_Y12.2.bfc.fq',
+	output: 
+		fastq = 'illumina/sim.SK1_Y12.pp.fq',
+	log:'illumina/sim.SK1_Y12.pp.fq.log'
+	message: 'Preprocessing paired-end illumina reads'
+	shell: 'sga preprocess --pe-mode 1 -o {output.fastq} {input.fastq1} {input.fastq2} > {log} 2>&1'
+
+rule sga_index:
+	input:
+		fastq = 'illumina/sim.SK1_Y12.pp.fq',
+	output:
+		rbwt = 'illumina/sim.SK1_Y12.pp.rbwt',
+		bwt = 'illumina/sim.SK1_Y12.pp.bwt',
+		rsai = 'illumina/sim.SK1_Y12.pp.rsai',
+		sai = 'illumina/sim.SK1_Y12.pp.sai',
+	log: 'illumina/sim.SK1_Y12.pp.sai.log'
+	message: 'SGA Indexing'
+	run:
+		shell('sga index -a ropebwt -t 20 {input.fastq} > {log} 2>&1')
+		shell('mv sim.SK1_Y12.pp.* illumina/')
+
+# sgarg@d3compute02:/local/data/yeast_analysis/illumina$ sga filter -x 2 --homopolymer-check --low-complexity-check -t 12 sim.SK1_Y12.pp.fq
+# https://github.com/sestaton/Pairfq
+#sgarg@d3compute02:/local/data/yeast_analysis$ ./scripts/pairfq_lite makepairs -i illumina/sim.SK1_Y12.pp.filter.pass.fa -fp illumina/sim.SK1_Y12.pp.filter.pass.1.fa -rp illumina/sim.SK1_Y12.pp.filter.pass.2.fa -fs illumina/sim.SK1_Y12.pp.filter.pass.fs.fa -rs illumina/sim.SK1_Y12.pp.filter.pass.rs.fa
+#lap-13-63:/home/shilpa/mikko/whole_yeast_genome/try# ./spades.py -1 ../yeast_analysis/sim.SK1_Y12.pp.filter.pass.1.fa -2 ../yeast_analysis/sim.SK1_Y12.pp.filter.pass.2.fa --only-assembler  -o ../yeast_analysis/
+# sgarg@d3compute02:/local/data/yeast_analysis$ mkdir graph
+#sgarg@d3compute02:/local/data/yeast_analysis/graph$ sed -n 1,392759p assembly_graph.gfa > assembly_graph.P.gfa
+#sgarg@d3compute02:/local/data/yeast_analysis/graph$ python ../scripts/String_to_int.py assembly_graph.P.gfa > assembly_graph.P.int.gfa
+#sgarg@d3compute02:/local/data/yeast_analysis/graph$ awk -F'\t' '{ if ($2 != $4) print $0}' assembly_graph.P.int.gfa > assembly_graph.P.int.remn2n.gfa
+#sgarg@d3compute02:/local/data/yeast_analysis/graph$ ../scripts/vg view --gfa-in --vg assembly_graph.P.int.remn2n.gfa > assembly_graph.P.int.remn2n.vg
+#sgarg@d3compute02:/local/data/yeast_analysis/graph$ ../scripts/vg mod -X 100 assembly_graph.P.int.remn2n.vg > assembly_graph.P.int.remn2n.X.vg
+#sgarg@d3compute02:/local/data/yeast_analysis/graph$ ../scripts/vg view -g assembly_graph.P.int.remn2n.X.vg | awk -F'\t' '{ if ($2 != $4) print $0}' - | ../scripts/vg view --gfa-in --vg - > graph.vg
+# sgarg@d3compute02:/local/data/yeast_analysis/pacbio$ cat SK1.filtered_subreads.fastq Y12.filtered_subreads.fastq > sample.fastq
+
+rule simulate_pacbio_reads:
+	input: 
+		sample='pacbio/sample.fastq',
+		haplotype='true_haps/{genome1, [a-zA-Z0-9]+}chr{chromosome, (all|[I|V|X]+)}.fa'
+	output:
+		fastq='pacbio/sim.{genome1, [a-zA-Z0-9]+}.chr{chromosome, (all|[I|V|X]+)}.fastq.gz',
+		maf='pacbio/sim.{genome1, [a-zA-Z0-9]+}.chr{chromosome, (all|[I|V|X]+)}.maf.gz'
+	log: 'pacbio/sim.{genome1, [a-zA-Z0-9]+}.chr{chromosome, (all|[I|V|X]+)}.fastq.log'
+	message: 'Simulating PacBio reads {output}'
+	run:
+		coverage = 40
+		halfcoverage = coverage / 2
+		seed = abs(hash(output.fastq))
+		shell('mkdir -p pacbio/tmp')
+		shell('time (pbsim --seed {seed} --prefix pacbio/tmp/sim.{wildcards.genome1}.chr{wildcards.chromosome} --depth {halfcoverage} --sample-fastq {input.sample} {input.haplotype}) > {log} 2>&1')
+		shell('awk \'NR%4==1 {{printf("%s_HAP{wildcards.genome1}.chr{wildcards.chromosome}\\n",$0)}} NR%4!=1 {{print}}\' pacbio/tmp/sim.{wildcards.genome1}.chr{wildcards.chromosome}_0001.fastq | gzip > {output.fastq}')
+		shell('cat pacbio/tmp/sim.{wildcards.genome1}.chr{wildcards.chromosome}_0001.maf | gzip > {output.maf}')
+		shell('rm -f pacbio/tmp/sim.{wildcards.genome1}.chr{wildcards.chromosome}_*')
+
+rule combine_pacbio_strains:
+	input: 'pacbio/sim.SK1.chr{chromosome, (all|[I|V|X]+)}.fastq.gz', 'pacbio/sim.Y12.chr{chromosome, (all|[I|V|X]+)}.fastq.gz',
+	output: 'pacbio/sim.SK1_Y12.chr{chromosome, (all|[I|V|X]+)}.cov40.fastq'
+	shell: 'zcat {input[0]} {input[1]} > {output}'
+
+#fix this.
+#rule combine_pacbio_chrms:
+#	input: 'pacbio/sim.SK1_Y12.chr{chromosome, (all|[I|V|X]+)}.cov40.fastq',
+#	output: expand('pacbio/sim.SK1_Y12.chrall.cov40.fastq', chromosome = chromosome)
+#	shell: 'cat {input} > {output}'
+
+#rule downsample_pacbio_reads:
+#	input:
+#		fastq1='pacbio/sim.SK1_Y12.chrall.cov40.fastq',
+#	output:
+#		fastq1='pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.lenall.fastq',
+#	message: 'Downsample input data to {wildcards.coverage}x'
+#	run:
+#		p = float(wildcards.coverage) / 40
+#		print(p)
+#		shell('{seqtk} sample -s100 {input.fastq1} p > {output.fastq1}')
+# sgarg@d3compute02:/local/data/yeast_analysis/pacbio$ for i in 10 20 30 40; do awk 'BEGIN {OFS = "\n"} {header = $0 ; getline seq ; getline qheader ; getline qseq ; if (length(seq) >1500) {print header, seq, qheader, qseq}}' < sim.SK1_Y12.chrall.cov${i}.lenall.fastq > sim.SK1_Y12.chrall.cov${i}.len1500.fastq; done
+
+
+#rule filter_reads_length:
+#	input: 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.lenall.fastq'
+#	output: 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq'
+#	shell:"awk '!/^>/ {{ next }} {{ getline seq }} length(seq) >= 1500 {{ print $0 "\n" seq }}' {input} > {output}"
+
+# canu and vg, linear
+# run with only one thread
+rule run_canu:
+	input: 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq'
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.fasta'
+	run:
+
+		if wildcards.coverage == 40:
+			shell('canu -p yeast -d /local/data/yeast_analysis/canu_cov{wildcards.coverage} genomeSize=12.16m  useGrid=0 correctedErrorRate=0.10 -pacbio-raw {input}')
+		else:
+			shell('canu -p yeast -d /local/data/yeast_analysis/canu_cov{wildcards.coverage} genomeSize=12.16m useGrid=0 corMhapSensitivity=high corMinCoverage=2 correctedErrorRate=0.10 minOverlapLength=499 corMaxEvidenceErate=0.3 -pacbio-raw {input}')
+# shilpa@lap-13-63:~/mikko/whole_yeast_genome$ sshfs -o idmap=user sgarg@d3compute02:/local/data/yeast_analysis/ /home/shilpa/mikko/whole_yeast_genome/yeast_mount/
+
+#align pacbio reads
+rule reverse_reads:
+	input: 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq',
+	output: 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.reverse.fastq'
+	shell: './scripts/ReverseReads {input} {output}'
+
+# Take care cannot run parallely because seedsoutindex will interfere.
+rule grem_seeds:
+	input: 'graph/graph.vg', 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq', 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.reverse.fastq'
+	output: 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.seeds.gam'
+	run:
+		shell('{grem} -f {input[1]} -l 20 -e 7 -n 0 -c 100000000 {input[0]}')
+		shell('./scripts/ReadIndexToId {input[1]} seedsoutindex approach/graph/seeds_{wildcards.coverage}_fw.gam')
+		shell('{grem} -f {input[2]} -l 20 -e 7 -n 0 -c 100000000 {input[0]}')
+		shell('./scripts/ReadIndexToId {input[2]} seedsoutindex approach/graph/seeds_{wildcards.coverage}_bw.gam')
+		shell('./scripts/PickSeedHits {output} 50 approach/graph/seeds_{wildcards.coverage}_fw.gam approach/graph/seeds_{wildcards.coverage}_bw.gam')
+
+rule run_aligner:
+	input: 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq', 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.seeds.gam', 'graph/graph.vg'
+	output: 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.gam'
+	shell: './scripts/wrapper -g {input[2]} -f {input[0]} -s {input[1]} -a {output} -t 40 -b 200 -B 500 1> approach/graph/sim.SK1_Y12.chrall.cov{wildcards.coverage}.len1500.stdout 2> approach/graph/sim.SK1_Y12.chrall.cov{wildcards.coverage}.len1500.stderr'
+
+rule reheader_canu:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.fasta'
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta'
+	shell: "cut -d' ' -f 1 {input} > {output}"
+
+#align canu contigs to graphs
+rule convert_fasta2fastq:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta'
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.fastq'
+	shell: 'perl scripts/fasta_to_fastq.pl {input} > {output}'
+
+rule reverse_canu_reads:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.fastq',
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.reverse.fastq'
+	shell: './scripts/ReverseReads {input} {output}'
+
+# Take care cannot run parallely because seedsoutindex will interfere.
+rule grem_canu_seeds:
+	input: 'graph/graph.vg', 'canu_cov{coverage,([0-9]+)}/yeast.contigs.fastq', 'canu_cov{coverage,([0-9]+)}/yeast.contigs.reverse.fastq'
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.seeds.gam'
+	run:
+		shell('{grem} -f {input[1]} -l 20 -e 7 -n 0 -c 100000000 {input[0]}')
+		shell('./scripts/ReadIndexToId {input[1]} seedsoutindex canu_cov{coverage,([0-9]+)}/seeds_fw.gam')
+		shell('{grem} -f {input[2]} -l 20 -e 7 -n 0 -c 100000000 {input[0]}')
+		shell('./scripts/ReadIndexToId {input[2]} seedsoutindex canu_cov{coverage,([0-9]+)}/seeds_bw.gam')
+		shell('./scripts/PickSeedHits {output} 50 canu_cov{wildcards.coverage}/seeds_fw.gam canu_cov{wildcards.coverage}/seeds_bw.gam')
+
+rule run_canu_aligner:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.fastq', 'canu_cov{coverage,([0-9]+)}/yeast.contigs.seeds.gam', 'graph/graph.vg'
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam'
+	shell: './scripts/wrapper -g {input[2]} -f {input[0]} -s {input[1]} -a {output} -t 40 -b 200 -B 500 1> canu_cov{wildcards.coverage}/yeast.contigs.gam.stdout 2> canu_cov{wildcards.coverage}/yeast.contigs.gam.stderr'
+
+# linear approach
+rule index_reference:
+	output:
+		'{path}.fasta.bwt'
+	input:
+		'{path}.fasta'
+	shell:
+		"bwa index {input}"
+
+rule illumina_to_canu:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta', 'illumina/sim.SK1_Y12.1.bfc.fq', 'illumina/sim.SK1_Y12.2.bfc.fq'
+	output: 'canu_cov{coverage,([0-9]+)}/illumina2canu.sorted.bam'
+	shell: '{bwa} mem -t12 {input[0]} {input[1]} {input[2]} | samtools view -Sb - | samtools sort - > {output}'
+
+rule call_variants:
+	input:'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta', 'canu_cov{coverage,([0-9]+)}/illumina2canu.sorted.bam'
+	output: 'canu_cov{coverage,([0-9]+)}/illumina2canu.vcf'
+	shell: 'freebayes -f {input[0]} {input[1]} | bcftools view -v snps,indels - | bgzip -c | vcf-sort - > {output}'
+
+rule pacbio_to_canu:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta', 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq'
+	output: 'canu_cov{coverage,([0-9]+)}/pacbio2canu.sorted.bam'
+	shell: '{bwa} bwasw -t12 {input[0]} {input[1]} -b5 -q2 -r1 -z10 -M | samtools view -Sb - | samtools sort - > {output} && {bwa} index {output}'
+
+rule run_phasing:
+	input: 'canu_cov{coverage,([0-9]+)}/illumina2canu.vcf', 'canu_cov{coverage,([0-9]+)}/pacbio2canu.sorted.bam'
+	output: 'canu_cov{coverage,([0-9]+)}/illumina2canu.wh.vcf'
+	log: 'canu_cov{coverage,([0-9]+)}/illumina2canu.wh.vcf.log'
+	shell: 'whatshap phase --indels --ignore-read-groups {input[0]} {input[1]} -o {output} 1> {log} 2>&1'
+
+rule align_true_haps_to_contigs:
+	input: 'true_haps/SK1.genome.fa', 'true_haps/Y12.genome.fa', 'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta'
+	output: 'canu_cov{coverage,([0-9]+)}/true_haps2yeast.contigs.sorted.bam'
+	shell: '{bwa} bwasw -t12 {input[2]} {input[0]} {input[1]} -M | samtools view -Sb - | samtools sort - > {output}'
+
+rule true_phasing:
+	input: 'canu_cov{coverage,([0-9]+)}/illumina2canu.vcf', 'canu_cov{coverage,([0-9]+)}/true_haps2yeast.contigs.sorted.bam'
+	output: 'canu_cov{coverage,([0-9]+)}/illumina2canu.true.wh.vcf'
+	log: 'canu_cov{coverage,([0-9]+)}/illumina2canu.true.wh.vcf.log'
+	shell: 'whatshap phase --indels --ignore-read-groups {input[0]} {input[1]} -o {output} 1> {log} 2>&1'
+
+rule wh_compare:
+	input: 'canu_cov{coverage,([0-9]+)}/illumina2canu.true.wh.vcf', 'canu_cov{coverage,([0-9]+)}/illumina2canu.wh.vcf',
+	output: 'canu_cov{coverage,([0-9]+)}/linear_comparison.eval'
+	log: 'canu_cov{coverage,([0-9]+)}/linear_comparison.vcf.log'
+	shell: 'whatshap compare --tsv-pairwise {output} {input[0]} {input[1]} 2>&1 > {log}'
+
+rule run_mummer_canu:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta', true_haps/{genome1, [a-zA-Z0-9]+}.genome.fa,
+	output: 'mummer/canu/yeast.canu_cov{coverage,([0-9]+)}to{genome1, [a-zA-Z0-9]+}.report', 'mummer/canu/yeast.canu_cov{coverage,([0-9]+)}to{genome1, [a-zA-Z0-9]+}.1coords'
+	shell: '{mummer} {input[1]} {input[0]} -p mummer/canu/yeast.canu_cov{wildcards.coverage}to{wildcards.genome1}'
+
+
+# align true haps to graph
+rule convert_fasta2fastq_refs:
+	input: 'true_haps/SK1.genome.fa', 'true_haps/Y12.genome.fa'
+	output: 'true_haps/SK1_Y12.genome.fastq'
+	run:
+		shell('cat {input[0]} {input[1]} | perl scripts/fasta_to_fastq.pl - > {output}')
+
+rule reverse_refs:
+	input: 'true_haps/SK1_Y12.genome.fastq',
+	output: 'true_haps/SK1_Y12.genome.reverse.fastq'
+	shell: './scripts/ReverseReads {input} {output}'
+
+# Take care cannot run parallely because seedsoutindex will interfere.
+rule grem_ref_seeds:
+	input: 'graph/graph.vg', 'true_haps/SK1_Y12.genome.fastq', 'true_haps/SK1_Y12.genome.reverse.fastq'
+	output: 'true_haps/SK1_Y12.genome.seeds.gam'
+	run:
+		shell('{grem} -f {input[1]} -l 20 -e 7 -n 0 -c 100000000 {input[0]}')
+		shell('./scripts/ReadIndexToId {input[1]} seedsoutindex true_haps/seeds_fw.gam')
+		shell('{grem} -f {input[2]} -l 20 -e 7 -n 0 -c 100000000 {input[0]}')
+		shell('./scripts/ReadIndexToId {input[2]} seedsoutindex true_haps/seeds_bw.gam')
+		shell('./scripts/PickSeedHits {output} 50 true_haps/seeds_fw.gam true_haps/seeds_bw.gam')
+
+rule run_ref_aligner:
+	input: 'true_haps/SK1_Y12.genome.fastq', 'true_haps/SK1_Y12.genome.seeds.gam', 'graph/graph.vg'
+	output: 'true_haps/SK1_Y12.genome.gam'
+	shell: './scripts/wrapper -g {input[2]} -f {input[0]} -s {input[1]} -a {output} -t 40 -b 200 -B 500 1> true_haps/SK1_Y12.genome.stdout 2> true_haps/SK1_Y12.genome.stderr'
+#TODO: still to get haplotigs
+# Now start with graph approach
+
+rule find_bubbles:
+	input: 'graph/graph.vg'
+	output: 'graph/graph.trans', 'graph/graph.snarls'
+	shell: '{vg} snarls -l -t -r {output[0]} {input}' > {output[1]}
+
+rule find_repetiticity:
+	input: 'graph/graph.trans', 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.gam', 'true_haps/SK1_Y12.genome.gam'
+	output: 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.reps'
+	run:
+		param_val = int(wildcards.coverage) + 5		
+		shell: 'python3 ./scripts/tandomicity.x.py {input[0]} {input[1]} {input[2]} {param_val} {output}'
+
+# check once the read name for contigs..
+rule order_bubbles:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam', 'graph/graph.trans', 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.reps',
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam_tig00000001.trans'
+	shell: 'python3 ./scripts/ordertransbygam.py {input[2]} {input[1]} {input[0]}'
+
+
+rule whatshap_graph_phasing:
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam_tig{tigids, ([0-9]+)}.trans', 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.gam', 'graph/graph.vg', 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam', 'true_haps/SK1_Y12.genome.gam',  'mummer/canu/yeast.canu_cov{coverage,([0-9]+)}toSK1.1coords'
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam_tig{tigids, ([0-9]+)}.read_partitions', 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam_tig{tigids, ([0-9]+)}.haplotigs'
+	log: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam_tig{tigids, ([0-9]+)}.log'
+	shell: 'whatshap phaseg {input[0]} {input[1]} {input[2]} {input[3]} {input[4]} {output[0]} {output[1]} {input[5]} 1> {log} 2>&1'
+
+
+
+
+
+
+	
