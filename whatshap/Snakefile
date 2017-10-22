@@ -8,6 +8,10 @@ platform = ['illumina', 'pacbio']
 sample = ['SK1_Y12']
 coverage = [10,20,30,40]
 chromosome = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI']
+tigids_10 = ["tig00000502","tig00000209","tig00000191","tig00000170","tig00000501","tig00000177","tig00000161","tig00000160","tig00000023","tig00000497","tig00(gedit:84517): Gtk-WARNING **: Calling Inhibit failed: GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown: The name org.gnome.SessionManager was not provided by any .service files000157","tig00000124","tig00000096","tig00000487","tig00000237","tig00000120","tig00000116","tig00000109","tig00000082","tig00000485","tig00000129","tig00000126","tig00000020","tig00000482","tig00000140","tig00000105","tig00000089","tig00000071","tig00000481","tig00000479","tig00000349","tig(gedit:84517): Gtk-WARNING **: Calling Inhibit failed: GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown: The name org.gnome.SessionManager was not provided by any .service files00000330","tig00000229","tig00000122","tig00000027","tig00000320","tig00000240","tig00000213","tig00000201","tig00000175","tig00000041","tig00000039","tig00000323","tig00000156","tig00000142","tig00000136","tig00000052","tig00000011","tig00000318","tig00000001","tig00000312","tig00000232","tig00000054","tig00000301","tig00000251","tig00000221","tig00000076","tig00000062","tig00000016","tig00000295","tig00000079","tig00000078","tig00000293","tig00000231","tig00000291","tig00000218","tig00000210","tig00000181","tig00000288","tig00000067","tig00000286","tig00000098","tig00000281","tig00000278","tig00000208","tig00000196","tig00000194","tig00000164","tig00000277","tig00000238","tig00000228","tig00000222","tig00000151","tig00000275","tig00000044","tig00000273","tig00000226","tig00000185","tig00000270","tig00000248","tig00000048","tig00000043","tig00000037","tig00000268","tig00000202","tig00000179","tig00000118","tig00000264","tig00000219","tig00000193","tig00000262","tig00000087","tig00000025","tig00000018","tig00000014","tig00000261","tig00000113","tig00000058","tig00000259","tig00000235","tig00000224","tig00000204","tig00000189","tig00000183","tig00000153","tig00000133","tig00000102","tig00000056","tig00000028","tig00000258","tig00000002","tig00000257"]
+tigids_20 = ["tig00000276","tig00000106","tig00000274","tig00000273","tig00000068","tig00000064","tig00000025","tig00000271","tig00000102","tig00000270","tig00000110","tig00000084","tig00000267","tig00000266","tig00000265","tig00000263","tig00000260","tig00000259","tig00000026","tig00000257","tig00000255","tig00000071","tig00000060","tig00000003","tig00000254","tig00000253","tig00000252","tig00000251","tig00000250","tig00000248","tig00000247","tig00000054","tig00000048","tig00000027","tig00000246","tig00000245","tig00000244","tig00000242","tig00000175","tig00000108","tig00000033","tig00000158","tig00000030","tig00000154","tig00000062","tig00000019","tig00000146","tig00000138","tig00000039","tig00000133","tig00000045","tig00000132","tig00000082","tig00000073","tig00000017","tig00000135","tig00000130","tig00000129","tig00000088","tig00000047","tig00000124","tig00000121","tig00000035","tig00000016","tig00000118","tig00000090","tig00000057","tig00000117","tig00000070","tig00000115","tig00000113"]
+tigids_30 = ["tig00000452","tig00000018","tig00000451","tig00000448","tig00000134","tig00000447","tig00000141","tig00000090","tig00000446","tig00000144","tig00000040","tig00000444","tig00000082","tig00000046","tig00000440","tig00000015","tig00000439","tig00000115","tig00000429","tig00000432","tig00000428","tig00000063","tig00000056","tig00000427","tig00000425","tig00000424","tig00000038","tig00000030","tig00000423","tig00000086","tig00000084","tig00000421","tig00000420","tig00000073","tig00000418","tig00000419","tig00000417","tig00000142","tig00000128","tig00000011","tig00000416","tig00000414","tig00000413","tig00000405","tig00000404","tig00000403","tig00000060","tig00000058","tig00000402","tig00000108","tig00000401","tig00000002","tig00000400","tig00000204","tig00000152","tig00000150","tig00000201","tig00000160","tig00000197","tig00000047","tig00000199","tig00000174","tig00000136","tig00000132","tig00000195","tig00000023","tig00000192","tig00000078","tig00000077","tig00000190","tig00000067","tig00000028","tig00000027","tig00000026","tig00000021","tig00000186","tig00000127","tig00000123","tig00000005","tig00000180","tig00000163","tig00000106","tig00000074","tig00000177","tig00000176","tig00000165","tig00000099","tig00000049"]
+tigids_40 = ["tig00000549","tig00000191","tig00000187","tig00000547","tig00000097","tig00000546","tig00000182","tig00000544","tig00000056","tig00000543","tig00000539","tig00000538","tig00000537","tig00000122","tig00000536","tig00000535","tig00000534","tig00000120","tig00000040","tig00000533","tig00000531","tig00000530","tig00000028","tig00000027","tig00000011","tig00000528","tig00000199","tig00000074","tig00000073","tig00000070","tig00000527","tig00000526","tig00000100","tig00000081","tig00000059","tig00000525","tig00000523","tig00000522","tig00000521","tig00000089","tig00000057","tig00000520","tig00000519","tig00000176","tig00000161","tig00000042","tig00000516","tig00000515","tig00000513","tig00000510","tig00000067","tig00000506","tig00000501","tig00000167","tig00000505","tig00000504","tig00000078","tig00000026","tig00000500","tig00000499","tig00000113","tig00000498","tig00000497","tig00000152","tig00000495","tig00000494","tig00000148","tig00000136","tig00000127","tig00000125","tig00000043","tig00000218","tig00000140","tig00000029","tig00000014","tig00000212","tig00000196","tig00000024","tig00000016","tig00000207","tig00000162"]
 
 # Tools assumed to be installed somewhere on the PATH.
 samtools = '/MMCI/TM/structvar/work/software/packages/samtools-1.2/samtools'
@@ -29,8 +33,10 @@ mummer = '~/MUMmer3.23/dnadiff'
 
 dataset_pattern = '{genome,[a-z]+}.{platform,[a-z]+}.{sample,[A-Z_0-9]+}'
 
+# for now, manually indexed canu contigs
 rule master:
 	input:
+		expand('canu_cov{coverage}/yeast.contigs.x.fasta.bwt', coverage = coverage),
 		#expand('sga/reads/{genome}.illumina.{sample}.cov{coverage}.chr{chromosome}.pp.rbwt', genome = genome, sample = sample, coverage=coverage, chromosome = chromosome),
 		#expand('gfatools/graphs/{genome}.illumina.{sample}.cov{coverage}.chr{chromosome}.pp.assembly-graph.int.gfa', genome = genome, sample = sample, coverage=coverage, chromosome = chromosome),
 		expand('illumina/sim.SK1_Y12.pp.fq', genome1= genome1),
@@ -41,7 +47,11 @@ rule master:
 		expand('illumina/sim.SK1_Y12.pp.rbwt'),
 		expand('approach/graph/sim.SK1_Y12.chrall.cov{coverage}.len1500.gam', coverage=coverage),
 		expand('canu_cov{coverage}/yeast.contigs.gam', coverage=coverage),
-		expand('mummer/canu/yeast.canu_cov{coverage}to{genome1}.report', coverage = coverage, genome1=genome1)
+		expand('mummer/canu/yeast.canu_cov{coverage}to{genome1}.report', coverage = coverage, genome1=genome1),
+		expand('true_haps/SK1_Y12.genome.gam'),
+		expand('canu_cov{coverage}/true_haps2yeast.contigs.sorted.bam', coverage = coverage),
+		expand('canu_cov{coverage}/linear_comparison.eval', coverage= coverage),
+		expand('canu_cov{coverage}/yeast.contigs.gam_tig00000027.trans', coverage = coverage)
 
 	message: 'MASTER rule'
 
@@ -181,17 +191,17 @@ rule reverse_reads:
 
 # Take care cannot run parallely because seedsoutindex will interfere.
 rule grem_seeds:
-	input: 'graph/graph.vg', 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq', 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.reverse.fastq'
-	output: 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.seeds.gam'
+	input: 'graph/graph.vg', 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.pref1000.fastq', 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.reverse.pref1000.fastq'
+	output: 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.seeds.pref1000.gam'
 	run:
 		shell('{grem} -f {input[1]} -l 20 -e 7 -n 0 -c 100000000 {input[0]}')
-		shell('./scripts/ReadIndexToId {input[1]} seedsoutindex approach/graph/seeds_{wildcards.coverage}_fw.gam')
+		shell('./scripts/ReadIndexToId {input[1]} seedsoutindex approach/graph/seeds_{wildcards.coverage}_fw.pref1000.gam')
 		shell('{grem} -f {input[2]} -l 20 -e 7 -n 0 -c 100000000 {input[0]}')
-		shell('./scripts/ReadIndexToId {input[2]} seedsoutindex approach/graph/seeds_{wildcards.coverage}_bw.gam')
-		shell('./scripts/PickSeedHits {output} 50 approach/graph/seeds_{wildcards.coverage}_fw.gam approach/graph/seeds_{wildcards.coverage}_bw.gam')
+		shell('./scripts/ReadIndexToId {input[2]} seedsoutindex approach/graph/seeds_{wildcards.coverage}_bw.pref1000.gam')
+		shell('./scripts/PickSeedHits {output} 50 approach/graph/seeds_{wildcards.coverage}_fw.pref1000.gam approach/graph/seeds_{wildcards.coverage}_bw.pref1000.gam')
 
 rule run_aligner:
-	input: 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq', 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.seeds.gam', 'graph/graph.vg'
+	input: 'pacbio/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.fastq', 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.seeds.pref1000.gam', 'graph/graph.vg'
 	output: 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.gam'
 	shell: './scripts/wrapper -g {input[2]} -f {input[0]} -s {input[1]} -a {output} -t 40 -b 200 -B 500 1> approach/graph/sim.SK1_Y12.chrall.cov{wildcards.coverage}.len1500.stdout 2> approach/graph/sim.SK1_Y12.chrall.cov{wildcards.coverage}.len1500.stderr'
 
@@ -275,7 +285,7 @@ rule wh_compare:
 	shell: 'whatshap compare --tsv-pairwise {output} {input[0]} {input[1]} 2>&1 > {log}'
 
 rule run_mummer_canu:
-	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta', true_haps/{genome1, [a-zA-Z0-9]+}.genome.fa,
+	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.x.fasta', 'true_haps/{genome1, [a-zA-Z0-9]+}.genome.fa',
 	output: 'mummer/canu/yeast.canu_cov{coverage,([0-9]+)}to{genome1, [a-zA-Z0-9]+}.report', 'mummer/canu/yeast.canu_cov{coverage,([0-9]+)}to{genome1, [a-zA-Z0-9]+}.1coords'
 	shell: '{mummer} {input[1]} {input[0]} -p mummer/canu/yeast.canu_cov{wildcards.coverage}to{wildcards.genome1}'
 
@@ -313,19 +323,21 @@ rule run_ref_aligner:
 rule find_bubbles:
 	input: 'graph/graph.vg'
 	output: 'graph/graph.trans', 'graph/graph.snarls'
-	shell: '{vg} snarls -l -t -r {output[0]} {input}' > {output[1]}
+	shell: '{vg} snarls -l -t -r {output[0]} {input[0]} > {output[1]}'
 
 rule find_repetiticity:
 	input: 'graph/graph.trans', 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.len1500.gam', 'true_haps/SK1_Y12.genome.gam'
 	output: 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.reps'
 	run:
 		param_val = int(wildcards.coverage) + 5		
-		shell: 'python3 ./scripts/tandomicity.x.py {input[0]} {input[1]} {input[2]} {param_val} {output}'
+		shell('python3 ./scripts/tandomicity.x.py {input[0]} {input[1]} {input[2]} {param_val} {output}')
 
-# check once the read name for contigs..
+# check once the read name for contigs.. sgarg@d3compute02:/local/data/yeast_analysis/canu_cov40$ ../scripts/vg view -a yeast.contigs.gam | jq '.name' > tig_names, cat tig_names | tr '\n' ','  > tig_names_1
+# do it for all the coverages
+
 rule order_bubbles:
 	input: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam', 'graph/graph.trans', 'approach/graph/sim.SK1_Y12.chrall.cov{coverage,([0-9]+)}.reps',
-	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam_tig00000001.trans'
+	output: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam_tig00000027.trans' # find the intersection of tig id between all the lists 
 	shell: 'python3 ./scripts/ordertransbygam.py {input[2]} {input[1]} {input[0]}'
 
 
@@ -335,7 +347,8 @@ rule whatshap_graph_phasing:
 	log: 'canu_cov{coverage,([0-9]+)}/yeast.contigs.gam_tig{tigids, ([0-9]+)}.log'
 	shell: 'whatshap phaseg {input[0]} {input[1]} {input[2]} {input[3]} {input[4]} {output[0]} {output[1]} {input[5]} 1> {log} 2>&1'
 
-
+# copy whatshap code from binary to server
+# write in master rule for whatshap graph phasing
 
 
 
