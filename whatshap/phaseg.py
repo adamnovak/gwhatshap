@@ -8,7 +8,7 @@ import stream
 import logging
 from . import vg_pb2
 from collections import Counter
-
+import sys
 from collections import defaultdict
 from .core import ReadSet, Read
 from functools import reduce
@@ -618,7 +618,7 @@ def reverse_complement(seq):
 	return "".join([seq_dict[base] for base in reversed(seq)])
 
 		
-def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_list, locus_branch_mapping, edge_connections, canu_alignments, vg_file, pred_haplotigs):
+def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_list, locus_branch_mapping, edge_connections, canu_alignments, vg_file, pred_haplotigs, locus_file):
 	#sample = 0
 	#components = sample_components[sample]
 	
@@ -708,6 +708,8 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 	with stream.open(str(canu_alignments), "rb") as istream:
 		for data in istream:
 			g = vg_pb2.Alignment()
+
+			print('i am ok1')
 			contig_nodes = []
 			contig_nodes_blocks = []
 			contig_nodes_seq = ''
@@ -779,7 +781,7 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 						contig_nodes_seq = contig_nodes_seq + reverse_complement(str(node_seq_list[node])) #TODO: define reversecomplement and check concatenation of string
 					else:
 						contig_nodes_seq = contig_nodes_seq + str(node_seq_list[node])
-				pred_haplotigs_file.write(">seq" + str(j) + "_1"+ "\n")
+				pred_haplotigs_file.write(">seq" + str(j) +"_" + str(locus_file) + "_1"+ "\n")
 				pred_haplotigs_file.write(contig_nodes_seq + '\n')
 				#print(contig_nodes_seq)
 				
@@ -787,6 +789,8 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 	with stream.open(str(canu_alignments), "rb") as istream:
 		for data in istream:
 			g = vg_pb2.Alignment()
+
+			print('i am ok2')
 			contig_nodes = []
 			contig_nodes_blocks = []
 			contig_nodes_seq = ''
@@ -858,11 +862,9 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 						contig_nodes_seq = contig_nodes_seq + reverse_complement(str(node_seq_list[node])) #TODO: define reversecomplement and check concatenation of string
 					else:
 						contig_nodes_seq = contig_nodes_seq + str(node_seq_list[node])
-				pred_haplotigs_file.write(">seq" + str(j) + "_2"+ "\n")
+				pred_haplotigs_file.write(">seq" + str(j) +"_" + str(locus_file) + "_2"+ "\n")
 				pred_haplotigs_file.write(contig_nodes_seq + '\n')
 				#print(contig_nodes_seq)	
-
-
 
 
 # GAM file for hap1 and hap2 in separate and store the information how many times the reads traverse the position for each hap1 and hap2 separately.		
@@ -1456,7 +1458,7 @@ def compute_coverage_at_variant(selected_reads):
 	return variant_pos_tocov
 
 #def run_phaseg(locus_file, gam_file, vg_file):
-def run_phaseg(locus_file, gam_file, vg_file, canu_alignments, true_haps, pred_read_paritioning, pred_haplotigs):
+def run_phaseg(locus_file, gam_file, vg_file, canu_alignments, true_haps, pred_read_paritioning, pred_haplotigs, canu_chr_true_mapping):
 	"""
 	Run WhatsHap.
 
@@ -1512,6 +1514,10 @@ def run_phaseg(locus_file, gam_file, vg_file, canu_alignments, true_haps, pred_r
 		recombination_costs = uniform_recombination_map(recombrate, accessible_positions)
 		# Finally, run phasing algorithm
 		#print(selected_reads)
+		if len(selected_reads) == 0:
+			print('I cannot phase this canu contig')
+			sys.exit()
+
 		dp_table = PedigreeDPTable(selected_reads, recombination_costs, pedigree, distrust_genotypes, accessible_positions)
 		superreads_list, transmission_vector = dp_table.get_super_reads()
 
@@ -1523,13 +1529,14 @@ def run_phaseg(locus_file, gam_file, vg_file, canu_alignments, true_haps, pred_r
 		
 		## To generate the connected components and corresponding haplotypes.
 		print("in components")
-		f = open('pred_read_paritioning', 'w')
+		f = open(pred_read_paritioning, 'w')
 		overall_components = find_components(accessible_positions, selected_reads)
 		
 		read_partitions_dict ={}
 		for read, haplotype in zip(selected_reads, read_partitions):
 			phaseset = overall_components[read[0].position] + 1
 			print(read.name, phaseset, haplotype, file=f)
+			#f.write(read.name + " " + str(phaseset) + " " + str(haplotype))
 			read_partitions_dict[read.name] = haplotype
 		#phaset is blockid
 
@@ -1574,7 +1581,7 @@ def run_phaseg(locus_file, gam_file, vg_file, canu_alignments, true_haps, pred_r
 					edge_connections_tmp[str(l.edge[j].to)].append(str(from_edge))
 
 
-		generate_hap_contigs_based_on_canu(superreads, overall_components, node_seq_list, locus_branch_mapping, edge_connections, canu_alignments, vg_file, pred_haplotigs)
+		generate_hap_contigs_based_on_canu(superreads, overall_components, node_seq_list, locus_branch_mapping, edge_connections, canu_alignments, vg_file, pred_haplotigs, locus_file)
 		#generate_hap_contigs_avgRL(superreads, components, node_seq_list, locus_branch_mapping, edge_connections, edge_connections_tmp, gam_file, read_partitions_dict, nodes_in_bubbles)
 		
 		# evaluation partition all the reads based on one iteration
@@ -1594,13 +1601,33 @@ def run_phaseg(locus_file, gam_file, vg_file, canu_alignments, true_haps, pred_r
 		#dp_table_true = PedigreeDPTable(all_reads_true, recombination_costs, pedigree, distrust_genotypes, accessible_positions)
 		#superreads_list_true, transmission_vector_true = dp_table_true.get_super_reads()
 		# to compute the phasing accuracy
+		mappingdict = defaultdict()
+		with open(canu_chr_true_mapping) as fp:
+			for line in fp:
+				var=line.rstrip().split("\t")
+				mappingdict[var[-1]] = var[-2][3:] # map tigs to chrs
+
+		print(mappingdict)
+		
+		tigid_from_locus = str(locus_file).split("_")[2].split(".")[0]
+		print(tigid_from_locus)
+		chrid = mappingdict[tigid_from_locus]
+		print(chrid)
 		true_haps = ReadSet()
 		for read in all_reads_true:
+			print(read.name)
+			if chrid not in read.name:
+				continue
+			print('i am ok3')
 			tmp_read = Read(read.name, 0, 0, 0)
 			for variant in read:
 				if variant.position in accessible_positions:
 					tmp_read.add_variant(variant.position, variant.allele, [10])
 			true_haps.add(tmp_read)
+		print(true_haps)
+		if len(true_haps) <2 or len(true_haps) >2:
+			print('i can not find phasing error rate')
+			sys.exit()
 		compare(superreads_list[0], true_haps, overall_components)
 		## To perform iterative whatshap phasing
 		#remaining_reads =[]
@@ -1667,6 +1694,7 @@ def add_arguments(parser):
 	arg('true_haps', metavar='TRUE_HAPS', help='compare phasing with true haps in GAM format.')
 	arg('pred_read_paritioning', metavar='PRED_READ_PARTITIONS', help='write predicted read paritioning')
 	arg('pred_haplotigs', metavar='PREED_HAPLOTIGS', help='write predicted haplotigs for every block')
+	arg('canu_chr_true_mapping', metavar = 'MAPPING', help = 'mummer mapping between canu contig and chromosomes')
 	
 	#TODO: add k parameter
 
