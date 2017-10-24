@@ -655,215 +655,145 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 	bubbles_start = []
 	bubbles_start2 = []
 
-	for sample, superreads in sample_superreads.items():
+		for sample, superreads in sample_superreads.items():
 		for v1, v2 in zip(*superreads):	
-			#TODO: handle ambiguos cases
 			b = locus_branch_mapping[v1.position][v1.allele]
-			if v1.allele == -2:
-				b = locus_branch_mapping[v1.position][1]
-			tmp =list()
-			# for every start/end node of the bubble, store the haplotype path in the bubble except the sink node of the bubble 
-			#if v1.position == 1:
-			tmp.append(b[0][0])
+			# tmp stores the nodes over the haplotype path in a bubble
+			tmp =set()
 			for p,j in enumerate(b):
-				tmp.append(j[-1])
-			# To handle consecutive bubbles on the same node.
-			if b[0][0] in haplotype_over_bubbles:
-				haplotype_over_bubbles[tmp[-1]] = tmp
-				start_node_to_bubble[tmp[-1]] = v1.position
-				bubbles_start.append(tmp[-1])
-			else:
-				haplotype_over_bubbles[b[0][0]]= tmp
-				start_node_to_bubble[b[0][0]] = v1.position
-				bubbles_start.append(b[0][0])
-				
-	for sample, superreads in sample_superreads.items():
-		for v1, v2 in zip(*superreads):	
-			#TODO: handle ambiguos cases
-			b = locus_branch_mapping[v2.position][v2.allele]
-			if v1.allele == -2:
-				b = locus_branch_mapping[v2.position][1]
-			tmp =list()
-			# for every start/end node of the bubble, store the haplotype path in the bubble except the sink node of the bubble 
-			#if v1.position == 1:
-			tmp.append(b[0][0])
-			for p,j in enumerate(b):
-				tmp.append(j[-1])
-			# To handle consecutive bubbles on the same node.
-			if b[0][0] in haplotype_over_bubbles2:
-				haplotype_over_bubbles2[tmp[-1]] = tmp
-				start_node_to_bubble2[tmp[-1]] = v2.position
-				bubbles_start2.append(tmp[-1])
-			else:
-				haplotype_over_bubbles2[b[0][0]]= tmp
-				start_node_to_bubble2[b[0][0]] = v2.position
-				bubbles_start2.append(b[0][0])
+				tmp.add(j[0])
+				tmp.add(j[1])
+
+			def dfs_path(start, goal, tmp):
+				stack = [(start, [start])]
+				visited = set()
+				count = 0
+				while stack:
+					(vertex, path) = stack.pop()
+					for next in edge_connections[vertex]:
+						print('count')
+						print(count)
+						if count > 5000:
+							break
+						if next in tmp and next not in visited:
+							#if "{}_{}".format(vertex, next) in edge_connections_sign:
+							if next == goal:
+								if len(path) == len(tmp) -1:
+									return path + [next]
+							else:
+								count+=1
+								stack.append((next, path + [next]))
+				return []
+
+			path = dfs_path(tmp[0], tmp[-1], tmp)
+			if len(path) != len(tmp):
+				path = dfs_path(tmp[-1], tmp[0], tmp)
+
+			# store the haplotype path with start or end as key
+			if len(path) > 0:
+				haplotype_over_bubbles[path[0]] = path # from start
+				haplotype_over_bubbles_end[path[-1]] = reversed(path) # from end
+				start_node_to_bubble[path[0]] = v1.position
+				bubbles_start.append(path[0])
+				bubbles_end.append(path[-1])
+			
+		
+	# consider underlying graph as bidirected graph
+	# start from canu contigs and make break them based on whatshap components
+	# In bubbles, consider the haplotype path made up of nodes stored and whether to traverse the path in forward or backward, decide based on canu
+	# at non-bubble region, consider path based on canu by considering the underlying graph.
+	with stream.open(str(canu_alignments), "rb") as istream:
+		for data in istream:
+			g = vg_pb2.Alignment()
+			contig_nodes = []
+			contig_nodes_blocks = []
+			contig_nodes_seq = ''
+			g.ParseFromString(data)
+			save_nodes = []
+			canu_nodes_toseq = defaultdict()
+			for i in range(0,len(g.path.mapping)):
+				index1 =  g.path.mapping[i].position.node_id
+				save_nodes.append(index1)
+				canu_nodes_toseq[index1] = g.path.mapping[i].edit[0].sequence
+			
+			it_val = 0
+			for i in range(0,len(g.path.mapping)):
+				if i >= it_val:
+					index1 =  g.path.mapping[i].position.node_id
+					orientation_canu = g.path.mapping[i].position.is_reverse
+
+					#if index1 not in haplotype_over_bubbles and index2 not in haplotype_over_bubbles:
+					if index1 not in haplotype_over_bubbles and index1 not in haplotype_over_bubbles_end:
+						contig_nodes_blocks.append(str(index1)+"_"+str(0)) # TODO: consider orientation/reverse complement thing from graph
+					
+					if index1 in haplotype_over_bubbles: # taking ordering from graph
+						for j in range(0, len(haplotype_over_bubbles[index1])-1): # one before the bubble end
+							node1 = haplotype_over_bubbles[index1][j]
+							node2 = haplotype_over_bubbles[index1][j+1]
+							if node2 in haplotype_over_bubbles[index1]:
+								if str(node1) + '_'+str(node2) in edge_connections_sign:
+									orientation = edge_connections_sign[str(node1) + '_'+str(node2)]
+									if j ==0:
+										contig_nodes_blocks.append(str(node1)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
+									contig_nodes_blocks.append(str(node2)+"_"+ orientation.split("_")[1])
+
+					if index1 in haplotype_over_bubbles_end: # taking ordering from graph
+						if orientation_canu == True:
+							for j in range(0, len(haplotype_over_bubbles[index1])-1): # one before the bubble end
+								node1 = haplotype_over_bubbles_end[index1][j]
+								node2 = haplotype_over_bubbles_end[index1][j+1]
+								if node2 in haplotype_over_bubbles_end[index1]:
+									if str(node1) + '_'+str(node2) in edge_connections_sign:
+										orientation = edge_connections_sign[str(node1) + '_'+str(node2)]
+										if j ==0:
+											contig_nodes_blocks.append(str(node1)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
+										contig_nodes_blocks.append(str(node2)+"_"+ orientation.split("_")[1])
+
+					if index1 in  haplotype_over_bubbles or index1 in  haplotype_over_bubbles_end:
+						max_value = 0
+						for p in haplotype_over_bubbles[index1]:
+							if p in save_nodes:
+								if max_value < save_nodes.index(p):
+									max_value = save_nodes.index(p)
+						it_val= max_value+1
+
+				else:
+					continue
+
+						# to take care of components, break when the bubbleid of previous and current is not equal
+						bubbleid=''
+						prevnode= 0		
+						if index1 in bubbles_start: 
+							if bubbles_start.index(index1)>1:
+								bubbleid = start_node_to_bubble[index1]
+								prevnode = bubbles_start[bubbles_start.index(index1) -1]
+						if index1 in bubbles_end:
+							if bubbles_end.index(index1)>1: 
+								bubbleid = start_node_to_bubble[haplotype_over_bubbles_end[index1][-1]]
+								prevnode = bubbles_start[bubbles_start.index(haplotype_over_bubbles_end[index1][-1]) -1]
+						if bubbles_start.index(index1)>1 or bubbles_end.index(index1)>1:
+							prevbubbleid = start_node_to_bubble[prevnode]
+							if components[prevbubbleid]!= components[bubbleid]:
+								contig_nodes.append(contig_nodes_blocks)
+								contig_nodes_blocks = []
 			
 
-	# start from canu contigs and assume each contig is in one component, so no need to check components from whatshap, but can be improved later.
-	# take care of reverse complement from bubbles and canu alignments.
-	# build the assembly based on Illumina data.
-	# check if the repetition involve bubbles or nodes removed for phasing.
-	# Just correct whereever u do phasing, otherwise just consider canu contigs.
-	with stream.open(str(canu_alignments), "rb") as istream:
-		for data in istream:
-			g = vg_pb2.Alignment()
-
-			print('i am ok1')
-			contig_nodes = []
-			contig_nodes_blocks = []
-			contig_nodes_seq = ''
-			g.ParseFromString(data)
-			save_nodes = []
-			for i in range(0,len(g.path.mapping)):
-				index1 =  g.path.mapping[i].position.node_id
-				save_nodes.append(index1)
-			#print('i am in canu')
-			k = 0
-			for i in range(0,len(g.path.mapping)):
-				index1 =  g.path.mapping[i].position.node_id
-				#index2 =  g.path.mapping[i+1].position.node_id
-				#print(index1)
-				#print(index2)
-				orientation = g.path.mapping[i].position.is_reverse
-				#if index1 not in haplotype_over_bubbles and index2 not in haplotype_over_bubbles:
-				if index1 not in haplotype_over_bubbles:
-					contig_nodes_blocks.append(str(index1)+"_"+str(orientation)) # taking ordering from canu
-					k +=1
-					#print('i am in canu1')
-
-				if index1 in haplotype_over_bubbles: # taking ordering from graph
-					for j in range(0, len(haplotype_over_bubbles[index1])):
-						#print('i am in canu2')
-						node1 = haplotype_over_bubbles[index1][j]
-						node2 = edge_connections[node1]
-						if node2 in haplotype_over_bubbles[index1]:
-							#print(node1)
-							#print(node2)
-							#if node1 == 116050 or node1 == 135765:
-								#continue
-							if str(node1) + '_'+str(node2) in edge_connections_sign:
-								orientation = edge_connections_sign[str(node1) + '_'+str(node2)]
-								if j ==0:
-									contig_nodes_blocks.append(str(node1)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
-								contig_nodes_blocks.append(str(node2)+"_"+ orientation.split("_")[1])
-
-							#if node2 in save_nodes:
-							#	i = save_nodes.index(node2) + 1 # TODO: also check this.
-
-						node1_tmp = haplotype_over_bubbles[index1][len(haplotype_over_bubbles[index1]) - j-1]
-						node2_tmp = edge_connections[node1_tmp]
-						if node2_tmp in haplotype_over_bubbles[index1]:
-							#print('hello')
-							#print(node1_tmp)
-							#print(node2_tmp)
-							if str(node1_tmp) + '_'+str(node2_tmp) in edge_connections_sign:
-								orientation = edge_connections_sign[str(node1_tmp) + '_'+str(node2_tmp)]
-								if j ==0:
-									contig_nodes_blocks.append(str(node1_tmp)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
-								contig_nodes_blocks.append(str(node2_tmp)+"_"+ orientation.split("_")[1])
-					k =0 # to keep track of bubble end and in this case add the node sequence of starting too.
-					if node2 in save_nodes and node1 in save_nodes and node1_tmp in save_nodes and node2_tmp in save_nodes:
-						i = max(max(max(save_nodes.index(node1), save_nodes.index(node2)), save_nodes.index(node1_tmp)), save_nodes.index(node2_tmp)) + 1
-								
-					if bubbles_start.index(index1)>1:
-						if components[start_node_to_bubble[bubbles_start[bubbles_start.index(index1)-1]]]!= components[start_node_to_bubble[index1]]:
-							contig_nodes.append(contig_nodes_blocks)
-							contig_nodes_blocks = []
-			# build the contig sequence taking care of reverse complements for every canu contigs
-			#print(contig_nodes)
 			contig_nodes.append(contig_nodes_blocks) # for the last one.
+			# build the contig sequence taking care of reverse complements for every canu contigs
 			for j, contig_blocks in enumerate(contig_nodes):
 				contig_nodes_seq = ''			
 				for i in contig_blocks:
 					node = int(i.split("_")[0])
-					if i.split("_")[1] == '1':
-						contig_nodes_seq = contig_nodes_seq + reverse_complement(str(node_seq_list[node])) #TODO: define reversecomplement and check concatenation of string
+					if node in canu_nodes_toseq:
+						contig_nodes_seq = contig_nodes_seq + str(canu_nodes_toseq[node])
 					else:
-						contig_nodes_seq = contig_nodes_seq + str(node_seq_list[node])
+						if i.split("_")[1] == '1':
+							contig_nodes_seq = contig_nodes_seq + reverse_complement(str(node_seq_list[node])) #TODO: define reversecomplement and check concatenation of string
+						else:
+							contig_nodes_seq = contig_nodes_seq + str(node_seq_list[node])
 				pred_haplotigs_file.write(">seq" + str(j) +"_" + str(locus_file) + "_1"+ "\n")
 				pred_haplotigs_file.write(contig_nodes_seq + '\n')
-				#print(contig_nodes_seq)
-				
-				
-	with stream.open(str(canu_alignments), "rb") as istream:
-		for data in istream:
-			g = vg_pb2.Alignment()
 
-			print('i am ok2')
-			contig_nodes = []
-			contig_nodes_blocks = []
-			contig_nodes_seq = ''
-			g.ParseFromString(data)
-			save_nodes = []
-			for i in range(0,len(g.path.mapping)):
-				index1 =  g.path.mapping[i].position.node_id
-				save_nodes.append(index1)
-			#print('i am in canu')
-			k = 0
-			for i in range(0,len(g.path.mapping)):
-				index1 =  g.path.mapping[i].position.node_id
-				#index2 =  g.path.mapping[i+1].position.node_id
-				#print(index1)
-				#print(index2)
-				orientation = g.path.mapping[i].position.is_reverse
-				#if index1 not in haplotype_over_bubbles2 and index2 not in haplotype_over_bubbles2:
-				if index1 not in haplotype_over_bubbles2:
-					contig_nodes_blocks.append(str(index1)+"_"+str(orientation)) # taking ordering from canu
-					k +=1
-					#print('i am in canu1')
-
-				if index1 in haplotype_over_bubbles2: # taking ordering from graph
-					for j in range(0, len(haplotype_over_bubbles2[index1])):
-						print('i am in canu2')
-						node1 = haplotype_over_bubbles2[index1][j]
-						node2 = edge_connections[node1]
-						if node2 in haplotype_over_bubbles2[index1]:
-							#print(node1)
-							#print(node2)
-							#if node1 == 116050 or node1 == 135765:
-								#continue
-							if str(node1) + '_'+str(node2) in edge_connections_sign:
-								orientation = edge_connections_sign[str(node1) + '_'+str(node2)]
-								if j ==0:
-									contig_nodes_blocks.append(str(node1)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
-								contig_nodes_blocks.append(str(node2)+"_"+ orientation.split("_")[1])
-
-							#if node2 in save_nodes:
-							#	i = save_nodes.index(node2) + 1 # TODO: also check this.
-
-						node1_tmp = haplotype_over_bubbles2[index1][len(haplotype_over_bubbles2[index1]) - j-1]
-						node2_tmp = edge_connections[node1_tmp]
-						if node2_tmp in haplotype_over_bubbles2[index1]:
-							#print('hello')
-							#print(node1_tmp)
-							#print(node2_tmp)
-							if str(node1_tmp) + '_'+str(node2_tmp) in edge_connections_sign:
-								orientation = edge_connections_sign[str(node1_tmp) + '_'+str(node2_tmp)]
-								if j ==0:
-									contig_nodes_blocks.append(str(node1_tmp)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
-								contig_nodes_blocks.append(str(node2_tmp)+"_"+ orientation.split("_")[1])
-					k =0 # to keep track of bubble end and in this case add the node sequence of starting too.
-					if node2 in save_nodes and node1 in save_nodes and node1_tmp in save_nodes and node2_tmp in save_nodes:
-						i = max(max(max(save_nodes.index(node1), save_nodes.index(node2)), save_nodes.index(node1_tmp)), save_nodes.index(node2_tmp)) + 1
-								
-					if bubbles_start2.index(index1)>1:
-						if components[start_node_to_bubble2[bubbles_start2[bubbles_start2.index(index1)-1]]]!= components[start_node_to_bubble2[index1]]:
-							contig_nodes.append(contig_nodes_blocks)
-							contig_nodes_blocks = []
-			# build the contig sequence taking care of reverse complements for every canu contigs
-			#print(contig_nodes)
-			contig_nodes.append(contig_nodes_blocks) # for the last one
-			for j, contig_blocks in enumerate(contig_nodes):
-				contig_nodes_seq = ''			
-				for i in contig_blocks:
-					node = int(i.split("_")[0])
-					if i.split("_")[1] == '1':
-						contig_nodes_seq = contig_nodes_seq + reverse_complement(str(node_seq_list[node])) #TODO: define reversecomplement and check concatenation of string
-					else:
-						contig_nodes_seq = contig_nodes_seq + str(node_seq_list[node])
-				pred_haplotigs_file.write(">seq" + str(j) +"_" + str(locus_file) + "_2"+ "\n")
-				pred_haplotigs_file.write(contig_nodes_seq + '\n')
 				#print(contig_nodes_seq)	
 
 
