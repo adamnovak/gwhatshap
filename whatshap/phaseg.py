@@ -659,10 +659,9 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 		for v1, v2 in zip(*superreads):	
 			b = locus_branch_mapping[v1.position][v1.allele]
 			# tmp stores the nodes over the haplotype path in a bubble
-			tmp =set()
+			tmp =list()
 			for p,j in enumerate(b):
-				tmp.add(j[0])
-				tmp.add(j[1])
+				tmp.append(j[-1])
 
 			def dfs_path(start, goal, tmp):
 				stack = [(start, [start])]
