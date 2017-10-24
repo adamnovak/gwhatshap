@@ -665,19 +665,19 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 				tmp.append(j[-1])
 
 			def dfs_path(start, goal, tmp):
-				stack = [(start, [start])]
+				stack = [((start, True), [(start, True)]),((start, False), [(start, False)])]
 				visited = set()
 				count = 0
 				while stack:
-					(vertex, path) = stack.pop()
-					for next in edge_connections[vertex]:
+					(traversal, path) = stack.pop()
+					for next in traversals_after:
 						print('count')
 						print(count)
 						if count > 5000:
 							break
-						if next in tmp and next not in visited:
+						if next[0] in tmp and next not in visited:
 							#if "{}_{}".format(vertex, next) in edge_connections_sign:
-							if next == goal:
+							if next[0] == goal:
 								if len(path) == len(tmp) -1:
 									return path + [next]
 							else:
