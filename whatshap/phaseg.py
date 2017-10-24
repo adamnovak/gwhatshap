@@ -700,7 +700,7 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 			# store the haplotype path with start or end as key
 			if len(path) > 0:
 				haplotype_over_bubbles[path[0]] = path # from start
-				haplotype_over_bubbles[reverse_traversal(path[-1])] = reversed_path(path)
+				haplotype_over_bubbles[reverse_traversal(path[-1])] = reverse_path(path)
 				haplotype_over_bubbles_end[path[-1]] = reverse_path(path) # from end
 				haplotype_over_bubbles_end[reverse_traversal(path[0])] = path
 				start_node_to_bubble[path[0]] = v1.position
