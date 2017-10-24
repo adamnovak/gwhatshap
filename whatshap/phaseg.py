@@ -723,7 +723,8 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 			canu_nodes_toseq = defaultdict()
 			for i in range(0,len(g.path.mapping)):
 				index1 =  g.path.mapping[i].position.node_id
-				save_nodes.append(index1)
+				orientation_canu = g.path.mapping[i].position.is_reverse
+				save_nodes.append((index1, orientation_canu))
 				canu_nodes_toseq[index1] = g.path.mapping[i].edit[0].sequence
 			
 			it_val = 0
@@ -741,37 +742,21 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 							contig_nodes_blocks.append(str(index1)+"_"+str(1))
 					
 					if (index1, orientation_canu) in haplotype_over_bubbles: # taking ordering from graph
-						for j in range(0, len(haplotype_over_bubbles[(index1, orientation_canu)])): # one before the bubble end
-							node1 = haplotype_over_bubbles[index1][j]
-							node2 = haplotype_over_bubbles[index1][j+1]
-							if node2 in haplotype_over_bubbles[index1]:
-								if str(node1) + '_'+str(node2) in edge_connections_sign:
-									orientation = edge_connections_sign[str(node1) + '_'+str(node2)]
-									if j ==0:
-										contig_nodes_blocks.append(str(node1)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
-									contig_nodes_blocks.append(str(node2)+"_"+ orientation.split("_")[1])
-
-					if index1 in haplotype_over_bubbles_end: # taking ordering from graph
-						if orientation_canu == True:
-							for j in range(0, len(haplotype_over_bubbles[index1])-1): # one before the bubble end
-								node1 = haplotype_over_bubbles_end[index1][j]
-								node2 = haplotype_over_bubbles_end[index1][j+1]
-								if node2 in haplotype_over_bubbles_end[index1]:
-									if str(node1) + '_'+str(node2) in edge_connections_sign:
-										orientation = edge_connections_sign[str(node1) + '_'+str(node2)]
-										if j ==0:
-											contig_nodes_blocks.append(str(node1)+"_"+ orientation.split("_")[0]) #TODO: take based on graph
-										contig_nodes_blocks.append(str(node2)+"_"+ orientation.split("_")[1])
-
-					if index1 in  haplotype_over_bubbles or index1 in  haplotype_over_bubbles_end:
-						max_value = 0
-						for p in haplotype_over_bubbles[index1]:
-							if p in save_nodes:
-								if max_value < save_nodes.index(p):
-									max_value = save_nodes.index(p)
-						it_val= max_value+1
+						for traversal in haplotype_over_bubbles[(index1, orientation_canu)][:-1]:
+							# Put each traversal that appears in the bubble in the contig node blocks
+							# Except for the last one, which will be in the next bubble or in Canu again
+							contig_nodes_blocks.append(str(traversal[0])+"_"+ ("1" if traversal[1] else "0"))
+					
+					if (index1, orientation_canu) in haplotype_over_bubbles:
+						# Skip to the last traversal in the bubble
+						# It will also be shared by Canu
+						it_val = save_nodes.index(haplotype_over_bubbles[(index1, orientation_canu)][-1])
+						if it_val == -1:
+							# Not found! Canu ends in the bubble.
+							break
 
 				else:
+					# Don't do this Canu visit, it's part of a bubble we already did.
 					continue
 
 						# to take care of components, break when the bubbleid of previous and current is not equal
