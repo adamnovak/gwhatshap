@@ -751,6 +751,9 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 						# Skip to the last traversal in the bubble
 						# It will also be shared by Canu
 						it_val = save_nodes.index(haplotype_over_bubbles[(index1, orientation_canu)][-1])
+						if it_val == -1:
+							# Not found! Canu ends in the bubble.
+							break
 
 				else:
 					# Don't do this Canu visit, it's part of a bubble we already did.
