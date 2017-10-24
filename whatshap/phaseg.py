@@ -733,11 +733,15 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 					orientation_canu = g.path.mapping[i].position.is_reverse
 
 					#if index1 not in haplotype_over_bubbles and index2 not in haplotype_over_bubbles:
-					if index1 not in haplotype_over_bubbles and index1 not in haplotype_over_bubbles_end:
-						contig_nodes_blocks.append(str(index1)+"_"+str(0)) # TODO: consider orientation/reverse complement thing from graph
+					if (index1, orientation_canu) not in haplotype_over_bubbles:
+						
+						if orientation_canu = False:
+							contig_nodes_blocks.append(str(index1)+"_"+str(0))
+						else:
+							contig_nodes_blocks.append(str(index1)+"_"+str(1))
 					
-					if index1 in haplotype_over_bubbles: # taking ordering from graph
-						for j in range(0, len(haplotype_over_bubbles[index1])-1): # one before the bubble end
+					if (index1, orientation_canu) in haplotype_over_bubbles: # taking ordering from graph
+						for j in range(0, len(haplotype_over_bubbles[(index1, orientation_canu)])): # one before the bubble end
 							node1 = haplotype_over_bubbles[index1][j]
 							node2 = haplotype_over_bubbles[index1][j+1]
 							if node2 in haplotype_over_bubbles[index1]:
