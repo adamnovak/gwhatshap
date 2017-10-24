@@ -624,24 +624,25 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 	
 	pred_haplotigs_file = open(pred_haplotigs, 'w')
 
-	edge_connections_sign = defaultdict()
+	# This holds a dict from (node ID, orientation) pair, where true is reverse
+	# (leftward) and false is forward (rightward) to a set of (node ID,
+	# orientation) pairs of the nodes you reach, and their orientations when you get
+	# there, reading off of the node in the specified orientation.
+	# We will call these pairs "traversals".
+	traversals_after = defaultdict(set)
+	
 	with stream.open(str(vg_file), "rb") as istream:
 		for data in istream:
 			l = vg_pb2.Graph()
 			l.ParseFromString(data)
 			for j in range(len(l.edge)):
-				from_edge = getattr(l.edge[j], "from")
-				#TODO: check this once, out by default 0 in dict
-				from_edge_orientation = 0
-				to_edge_orientation = 0
-				if l.edge[j].from_start == True:
-					from_edge_orientation = 1
-				if l.edge[j].to_end == True:
-					to_edge_orientation = 1 # store the orientation of each node
-				edge_connections_sign[str(from_edge)+"_"+str(l.edge[j].to)] = str(from_edge_orientation)+"_"+str(to_edge_orientation)
-				# 1 means take the reverse complement of the node.
-
-	
+				from_traversal = (getattr(l.edge[j], "from"), l.edge[j].from_start)
+				to_traversal = (l.edge[j].to, l.edge[j].to_end)
+				
+				# Put the edge in the way it was read
+				traversals_after[from_traversal].add(to_traversal)
+				# Also store it in the other orientation, so you can follow it backward
+				traversals_after[(to_traversal[0], not to_traversal[1])].add((from_traversal[0], not from_traversal[1]))
 
 	# TODO: sort components dictionary by value.
 	prev_comp = -1
