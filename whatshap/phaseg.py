@@ -653,9 +653,7 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 	haplotype_over_bubbles2 = defaultdict(list)
 	start_node_to_bubble = defaultdict(list)
 	start_node_to_bubble2 = defaultdict(list)
-	bubbles_start = []
-	bubbles_start2 = []
-
+	
 		for sample, superreads in sample_superreads.items():
 		for v1, v2 in zip(*superreads):	
 			b = locus_branch_mapping[v1.position][v1.allele]
@@ -704,8 +702,7 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 				haplotype_over_bubbles_end[path[-1]] = reverse_path(path) # from end
 				haplotype_over_bubbles_end[reverse_traversal(path[0])] = path
 				start_node_to_bubble[path[0]] = v1.position
-				bubbles_start.append(path[0])
-				bubbles_end.append(path[-1])
+				start_node_to_bubble[reverse_traversal(path[-1])] = v1.position
 			
 		
 	# consider underlying graph as bidirected graph
@@ -727,13 +724,28 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 				save_nodes.append((index1, orientation_canu))
 				canu_nodes_toseq[index1] = g.path.mapping[i].edit[0].sequence
 			
+			# What component was the last bubble in, if there was a last bubble
+			prev_component = None
+			
 			it_val = 0
 			for i in range(0,len(g.path.mapping)):
 				if i >= it_val:
 					index1 =  g.path.mapping[i].position.node_id
 					orientation_canu = g.path.mapping[i].position.is_reverse
 
-					#if index1 not in haplotype_over_bubbles and index2 not in haplotype_over_bubbles:
+					# to take care of components, break when the bubbleid of previous and current is not equal
+					if (index1, orientation_canu) in start_node_to_bubble:
+						bubbleid = start_node_to_bubble[(index1, orientation_canu)]
+						component = components[bubbleid]
+						if prev_component is not None and component != prev_component:
+							# We have moved to a new component of bubbles
+							contig_nodes.append(contig_nodes_blocks)
+							contig_nodes_blocks = []
+							prev_component = component
+						elif prev_component is None:
+							# Remember the first component
+							prev_component = component
+				
 					if (index1, orientation_canu) not in haplotype_over_bubbles:
 						
 						if orientation_canu = False:
@@ -758,23 +770,6 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 				else:
 					# Don't do this Canu visit, it's part of a bubble we already did.
 					continue
-
-						# to take care of components, break when the bubbleid of previous and current is not equal
-						bubbleid=''
-						prevnode= 0		
-						if index1 in bubbles_start: 
-							if bubbles_start.index(index1)>1:
-								bubbleid = start_node_to_bubble[index1]
-								prevnode = bubbles_start[bubbles_start.index(index1) -1]
-						if index1 in bubbles_end:
-							if bubbles_end.index(index1)>1: 
-								bubbleid = start_node_to_bubble[haplotype_over_bubbles_end[index1][-1]]
-								prevnode = bubbles_start[bubbles_start.index(haplotype_over_bubbles_end[index1][-1]) -1]
-						if bubbles_start.index(index1)>1 or bubbles_end.index(index1)>1:
-							prevbubbleid = start_node_to_bubble[prevnode]
-							if components[prevbubbleid]!= components[bubbleid]:
-								contig_nodes.append(contig_nodes_blocks)
-								contig_nodes_blocks = []
 			
 
 			contig_nodes.append(contig_nodes_blocks) # for the last one.
