@@ -688,11 +688,21 @@ def generate_hap_contigs_based_on_canu(sample_superreads, components, node_seq_l
 			path = dfs_path(tmp[0], tmp[-1], tmp)
 			if len(path) != len(tmp):
 				path = dfs_path(tmp[-1], tmp[0], tmp)
+			
+			# We need a function to flip a traversal
+			def reverse_traversal(trav):
+				return (trav[0], not trav[1])
+			
+			# We need a function to flip a path and all its traversals
+			def reverse_path(to_reverse):
+				return [reverse_traversal(t) for t in reversed(path)]
 
 			# store the haplotype path with start or end as key
 			if len(path) > 0:
 				haplotype_over_bubbles[path[0]] = path # from start
-				haplotype_over_bubbles_end[path[-1]] = reversed(path) # from end
+				haplotype_over_bubbles[reverse_traversal(path[-1])] = reverse_path(path)
+				haplotype_over_bubbles_end[path[-1]] = reverse_path(path) # from end
+				haplotype_over_bubbles_end[reverse_traversal(path[0])] = path
 				start_node_to_bubble[path[0]] = v1.position
 				bubbles_start.append(path[0])
 				bubbles_end.append(path[-1])
